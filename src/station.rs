@@ -1,7 +1,9 @@
+use crate::transceive::{ReceiveCD, Transceiver};
+
 pub struct Station {
     id: usize,
     p: usize,
-    received: Vec<u8>,   // buffer, store received data
+    received: Vec<u8>, // buffer, store received data
     init_data: InitData,
 }
 
@@ -13,17 +15,28 @@ struct InitData {
     l_j: usize,      // from Nakano, Et al.: l_i-1
 }
 
-impl Station {
-    /// A round of the inner for-loop of Interleaved_Initialize() from the paper.
-    fn receiver_interleaved_round(mut self) {
+impl Transceiver for Station {
+    fn send(&mut self) {
+        // TODO
+    }
+
+    fn recv(&mut self) -> ReceiveCD {
+        // TODO
+        ReceiveCD::None
+    }
+
+    fn recv_timeslice(&mut self) -> ReceiveCD {
+        // TODO
+        // drain and cache data, use aggregating OR priority queue for synchronization
+        ReceiveCD::None
+    }
+
+    fn interleaved_round(&mut self) {
         let l: usize = 0;
-        // get l from previous round l_j (l_i - 1) (discard until message found?)
+        // TODO: get l from previous round l_j (l_i - 1) (discard until message found?)
 
         for k in (self.init_data.l_j + 1)..self.init_data.l_i {
-            // detect if NULL, SINGLE, or COLLISION
-                // call fn defined by trait
-            // transmit n_i and l
-                // call fn defined by trait
+            self.interleaved_round_step(k);
         }
         self.init_data.l_i = l;
     }
