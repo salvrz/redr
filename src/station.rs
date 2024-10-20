@@ -1,4 +1,4 @@
-use crate::transceive::{ReceiveCD, Transceiver};
+use crate::transceive::{ReceiveCD, Transceive, Initialize};
 
 pub struct Station {
     id: usize,
@@ -15,7 +15,7 @@ struct InitData {
     l_j: usize,      // from Nakano, Et al.: l_i-1
 }
 
-impl Transceiver for Station {
+impl Transceive for Station {
     fn send(&mut self, data: Vec<u8>) {
         // TODO
     }
@@ -25,36 +25,47 @@ impl Transceiver for Station {
         ReceiveCD::None
     }
 
+    fn sync_send(&mut self, timeslice: usize, data: Vec<u8>) {
+        // TODO
+    }
+}
+
+impl Initialize for Station {
+    fn get_n_i(&self) -> usize {
+        self.init_data.n_i
+    }
+
+    fn set_n_i(&mut self, new_n_i: usize) {
+        self.init_data.n_i = new_n_i;
+    }
+
+    fn get_l_i(&self) -> usize {
+        self.init_data.l_i
+    }
+
+    fn set_l_i(&mut self, new_l_i: usize) {
+        self.init_data.l_i = new_l_i;
+    }
+
+    fn get_local_l(&self) -> usize {
+        self.init_data.local_l
+    }
+
+    fn set_local_l(&mut self, new_local_l: usize) {
+        self.init_data.local_l = new_local_l;
+    }
+
+    fn get_l_j(&self) -> usize {
+        self.init_data.l_j
+    }
+
+    fn set_l_j(&mut self, new_l_j: usize) {
+        self.init_data.l_j = new_l_j;
+    }
+
     fn recv_timeslice(&mut self) -> ReceiveCD {
         // TODO
         // drain and cache data, use aggregating OR priority queue for synchronization
         ReceiveCD::None
-    }
-
-    fn handle_collision(&mut self) {
-        self.init_data.local_l += 2;
-    }
-
-    fn handle_single(&mut self) {
-        self.init_data.n_i += 1;
-    }
-
-    fn send_round_step(&mut self) {
-        // TODO
-        // transmit n_i and l
-        let data = self.init_data.n_i.to_be_bytes().to_vec();  // TODO: still need l
-        self.send(data);
-    }
-
-    fn interleaved_round(&mut self) {
-        let new_l_j: usize = 0;
-        // TODO: get l from previous round l_j (l_i - 1) (discard until message found?)
-
-        for _ in (self.init_data.l_j + 1)..self.init_data.l_i {
-            self.interleaved_round_step();
-        }
-
-        self.init_data.l_i = self.init_data.local_l;
-        self.init_data.l_i = new_l_j;
     }
 }
