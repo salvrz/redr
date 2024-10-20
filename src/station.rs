@@ -16,7 +16,7 @@ struct InitData {
 }
 
 impl Transceiver for Station {
-    fn send(&mut self) {
+    fn send(&mut self, data: Vec<u8>) {
         // TODO
     }
 
@@ -31,13 +31,30 @@ impl Transceiver for Station {
         ReceiveCD::None
     }
 
+    fn handle_collision(&mut self) {
+        self.init_data.local_l += 2;
+    }
+
+    fn handle_single(&mut self) {
+        self.init_data.n_i += 1;
+    }
+
+    fn send_round_step(&mut self) {
+        // TODO
+        // transmit n_i and l
+        let data = self.init_data.n_i.to_be_bytes().to_vec();  // TODO: still need l
+        self.send(data);
+    }
+
     fn interleaved_round(&mut self) {
-        let l: usize = 0;
+        let new_l_j: usize = 0;
         // TODO: get l from previous round l_j (l_i - 1) (discard until message found?)
 
-        for k in (self.init_data.l_j + 1)..self.init_data.l_i {
-            self.interleaved_round_step(k);
+        for _ in (self.init_data.l_j + 1)..self.init_data.l_i {
+            self.interleaved_round_step();
         }
-        self.init_data.l_i = l;
+
+        self.init_data.l_i = self.init_data.local_l;
+        self.init_data.l_i = new_l_j;
     }
 }
