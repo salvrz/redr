@@ -1,9 +1,12 @@
-use crate::transceive::{ReceiveCD, Transceive, Initialize};
+use std::collections::VecDeque;
+
+use crate::transceive::{ReceiveCD, Transceive, Initialize, RoundAction};
 
 pub struct Station {
     id: usize,
-    p: usize,
+    p: usize,          // graph size
     received: Vec<u8>, // buffer, store received data
+    action_queue: VecDeque<RoundAction>,  // actoins to do for this outer-round
     init_data: InitData,
 }
 
@@ -27,6 +30,11 @@ impl Transceive for Station {
 
     fn sync_send(&mut self, timeslice: usize, data: Vec<u8>) {
         // TODO
+    }
+
+    fn sync_recv(&mut self, data: Vec<u8>) -> usize {
+        // TODO
+        0
     }
 }
 
@@ -67,5 +75,28 @@ impl Initialize for Station {
         // TODO
         // drain and cache data, use aggregating OR priority queue for synchronization
         ReceiveCD::None
+    }
+}
+
+
+impl Station {
+    fn new(id: usize, p: usize) -> Station {
+        let s: Station = Station {
+            id,
+            p,
+            received: Vec::new(),
+            action_queue: VecDeque::new(),
+            init_data: InitData {
+                n_i: 0,
+                local_l: 0,
+                global_l: 0,
+                l_i: 0,
+                l_j: 0,
+            },
+        };
+
+        // TODO populate action_queue with initial actions for first round
+
+        s
     }
 }
