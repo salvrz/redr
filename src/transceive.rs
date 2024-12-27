@@ -6,11 +6,14 @@ pub struct RedrData {
     // data: T
 }
 
+/// Actions which stations can perform during an outer-round.
 pub enum RoundAction {
-    // Leader: timeslice, N_i, l_i, l_(i-1)
+    // Leader: timeslice, current N_i, l_(i-1), l_i
     Leader(usize, usize, usize, usize),
-    // Follower: timesice, N_(i-1)
+    // Follower: timesice, previous N_i
     Follower(usize, usize),
+    // Round Conclusion: timeslice, N, L
+    RoundConclusion(usize, usize, usize),
 }
 
 /// Indicates state of transmission for a given synchronized timeslice.
@@ -37,13 +40,27 @@ pub trait Transceive {
 
 // Second impl attempt
 pub trait Interleaved: Transceive {
+    // Get the global L value.
+    fn get_global_l(&self) -> usize;
+    /// Get next action to perform.
+    fn next_action(&mut self) -> Option<RoundAction>;
+
+    /// Return once timeslice reached.
+    ///
+    /// While waiting for timeslice, we want to "release" the CPU. This allows
+    /// us to conserve energy by turning off the device, or performing another
+    /// operation such as sleep or calculate digits of pi, if the user desires.
+    fn wait_until_timeslice(&mut self, timeslice: usize);
+
     /// Facilitate the inner-round/inner-for-loop.
     ///
     /// timeslice: timeslice which inner-round starts
     /// n_i: starting N_i value for this round
     /// l_i: l_i
     /// l_j: l_(i-1)
-    fn leader_action(&self, timeslice: usize, n_i: usize, l_i: usize, l_j: usize) {
+    fn leader_action(&mut self, timeslice: usize, n_i: usize, l_j: usize, l_i: usize) {
+        // TODO: wait until timeslice
+        self.wait_until_timeslice(timeslice);
         let new_l_j: usize = 0;
         // TODO: get l from previous round l_j (l_i - 1) (discard until message found
         // for round l_j)
@@ -54,25 +71,69 @@ pub trait Interleaved: Transceive {
 
         self.set_l_i(self.get_local_l());
         self.set_l_j(new_l_j);
+        // TODO check if this is technically round conclusion
     }
 
     /// Follower action for one step the inner-round/inner-for-loop.
     ///
     /// timeslice: timeslice for step to participate in
     /// n_i: previous n_i
-    fn follower_action(&self, timeslice: usize, n_i: usize) {
+    fn follower_action(&mut self, timeslice: usize, n_i: usize) {
         // TODO
+        // TODO: wait until timeslice
+        self.wait_until_timeslice(timeslice);
         // timeslice 2j-1) transmit, claiming participation in P_j
         // timeslice 2j) leader -> (N_i, l) splits P_j OR assigns id N_i
             // if N_i sent by leader changes, take id
             // else, split P_j, calculate next participating timeslot
+        // TODO check if this is technically round conclusion
     }
 
-    fn f(&self) {
+    /// Action performed by all stations at the end of an outer-round.
+    /// Update the global L value to determine if more rounds are necessary.
+    fn round_conclusion_action(&mut self, timeslice: usize, n: usize, l: usize) {
+        // TODO
+        // TODO: wait until timeslice
+        self.wait_until_timeslice(timeslice);
+        // update values
+        // calculate next rounds conclusion
+        // TODO: does next rounds actions need to be calculated here? I think
+        // they're done during other acitons (eg. new partitions know when to
+        // participate next round since l value?)
+    }
+
+    /// Determine and perform next action
+    fn handle_action(&mut self) {
+        let action: RoundAction;
+        match self.next_action() {
+            Some(a) => action = a,
+            None => {
+                // TODO
+                // if no action and L >= 1, error!
+                println!("Error: no action to perform, but L >= 1. There should
+                    at least be a RoundConclusion action....");
+                return;
+            },
+        }
+
+        match action {
+            RoundAction::Leader(timeslice, n_i, l_j, l_i) =>
+                self.leader_action(timeslice, n_i, l_j, l_i),
+            RoundAction::Follower(timeslice, n_i) =>
+                self.follower_action(timeslice, n_i),
+            RoundAction::RoundConclusion(timeslice, n_i, l) =>
+                self.round_conclusion_action(timeslice, n_i, l),
+        }
+    }
+
+    fn f(&mut self) {
         // TODO
         // iterate over action_queue, complete each action
         // in last timeslice of outer-round, all stations listen
         // rinse and repeat
+        while self.get_global_l() >= 1 {
+            self.handle_action();
+        }
     }
 }
 

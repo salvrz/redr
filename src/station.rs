@@ -4,6 +4,7 @@ use crate::transceive::{ReceiveCD, Transceive, Initialize, RoundAction};
 
 pub struct Station {
     id: usize,
+    l: usize,          // global L value for tracking initialization progress
     p: usize,          // graph size
     received: Vec<u8>, // buffer, store received data
     action_queue: VecDeque<RoundAction>,  // actoins to do for this outer-round
@@ -83,6 +84,7 @@ impl Station {
     fn new(id: usize, p: usize) -> Station {
         let s: Station = Station {
             id,
+            l: 1,
             p,
             received: Vec::new(),
             action_queue: VecDeque::new(),
