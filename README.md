@@ -16,6 +16,10 @@ protocol (Nakano and Olariu 40).
     - Inner-round — An iteration of the inner for-loop of the
     `Interleaved_Initialize(...)` protocol (Nakano and Olariu 40). I beleive
     there is enough work done during the inner-round to warrant this term.
+- Leader — The station S(i) managing the split-tree rooted at P~i~; the station
+facilitating the current outer-round.
+- Follower — A station with items to send to Leader S(i); a member of the
+split-tree rooted at P~i~.
 
 ## Citations
 [Koji Nakano and Stephen Olariu's Energy-Efficient Randomized Routing in Radio Networks](https://dl.acm.org/doi/pdf/10.1145/345848.345856)
