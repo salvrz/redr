@@ -229,5 +229,6 @@ pub trait Interleaved: Transceive {
                                 should at least be a RoundConclusion action...."),
             }
         }
+        // TODO: handle conclusion
     }
 }
