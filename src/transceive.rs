@@ -206,17 +206,7 @@ pub trait Interleaved: Transceive {
     }
 
     /// Determine and perform next action
-    fn handle_action(&mut self) {
-        let action: RoundAction;
-        match self.pop_action() {
-            Some(a) => action = a,
-            None => {
-                println!("Error: no action to perform, but L >= 1. There should
-                    at least be a RoundConclusion action....");
-                return;
-            },
-        }
-
+    fn handle_action(&mut self, action: RoundAction) {
         match action {
             RoundAction::Leader(timeslice, l_j, l_i) =>
                 self.leader_action(timeslice, l_j, l_i),
@@ -227,13 +217,17 @@ pub trait Interleaved: Transceive {
         }
     }
 
-    fn f(&mut self) {
+    fn interleaved_initialize(&mut self) {
         // TODO
         // iterate over action_queue, complete each action
         // in last timeslice of outer-round, all stations listen
         // rinse and repeat
         while self.get_global_l() >= 1 {
-            self.handle_action();
+            match self.pop_action() {
+                Some(action) => self.handle_action(action),
+                None => panic!("Error: no action to perform, but L >= 1. There
+                                should at least be a RoundConclusion action...."),
+            }
         }
     }
 }
