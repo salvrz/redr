@@ -184,7 +184,7 @@ pub trait Interleaved: Transceive {
                 Possibly an overflow error.");
         }
 
-        // TODO check if this is technically round conclusion
+        // TODO check if this is technically round conclusion (see conclude_l)
     }
 
     /// Handle leader's response, and update this follower's assignment status.
@@ -237,7 +237,7 @@ pub trait Interleaved: Transceive {
             },
         }
 
-        // TODO check if this is technically round conclusion
+        // TODO check if this is technically round conclusion (see conclude_f)
     }
 
     /// Receive the data from the round concluding step and handle the round's
