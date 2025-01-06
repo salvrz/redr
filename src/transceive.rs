@@ -8,12 +8,12 @@ pub struct RedrData {
 
 /// Actions which stations can perform during an outer-round.
 pub enum RoundAction {
-    // Leader: timeslice, l_(i-1), l_i
-    Leader(usize, usize, usize),
-    // Follower: timesice, previous N_i
-    Follower(usize, usize),
-    // Round Conclusion: timeslice, N, L
-    RoundConclusion(usize, usize, usize),
+    // Leader: timeslice, l_(i-1), l_i, leader is concluding
+    Leader(usize, usize, usize, bool),
+    // Follower: timesice, previous N_i, follower is concluding
+    Follower(usize, usize, bool),
+    // Round Conclusion: timeslice
+    RoundConclusion(usize),
 }
 
 /// Indicates state of transmission for a given synchronized timeslice.
@@ -53,6 +53,9 @@ pub trait Interleaved: Transceive {
     /// Get the global L value.
     fn get_global_l(&self) -> usize;
 
+    /// Set the global L value.
+    fn set_global_l(&mut self, l: usize);
+
     /// Get next action to perform.
     fn pop_action(&mut self) -> Option<RoundAction>;
 
@@ -76,12 +79,54 @@ pub trait Interleaved: Transceive {
     /// operation such as sleep or calculate digits of pi, if the user desires.
     fn wait_until_timeslice(&mut self, timeslice: usize);
 
-    /// Calculate and update next round's starting time.
-    fn update_next_round_start(&mut self, l: usize) {
+    /// Update the last queued leader action to be a concluding action.
+    ///
+    /// The last action in the queue is the leader action. Update the
+    /// conclusion flag to be set.
+    fn set_last_leader_action_concluding(&mut self);
+
+    /// Update the last queued follower action to be a concluding action.
+    ///
+    /// The last action in the queue is the follower action. Update the
+    /// conclusion flag to be set.
+    fn set_last_follower_action_concluding(&mut self);
+
+    /// Calculate and update next round's starting time, and update global L.
+    fn update_next_round_values(&mut self, l: usize) {
         // l is the number of partitions of P.
         // l is therefore also the number of steps needed for this round.
         // Each step takes 2 timeslices (follower + leader actions).
         self.update_next_round_t(self.get_next_round_t() + (2 * l));
+        self.set_global_l(l);
+    }
+
+    /// Prepare for the next round.
+    ///
+    /// Update global L value and next outer-round's starting timeslice,
+    /// allowing stations to calculate when to schedule their actions for the
+    /// following round.
+    ///
+    /// Determine if leader or *last* follower action are the round conclusion
+    /// step.
+    fn round_conclusion(&mut self, l: usize) {
+        // calculate and update values
+        self.update_next_round_values(l);
+
+        // determine if all leaders after S(i) are done => S(i) is last leader
+        if self.get_leader_l() == l {
+            // TODO: determine if leader finished during this round (l remained the same for leader's round)
+                // idea: just set leader_l to -1? except what if you're the last station?
+            self.set_last_leader_action_concluding();
+        }
+
+        // determine if *last* follower action is the round conclusion
+        if self.get_last_follower_l() == l {
+            // TODO: determine if l remained the same for follower's step
+                // idea: just set follower_l to -1? except what if only one leader left?
+            self.set_last_follower_action_concluding();
+        }
+
+        // TODO: calculate next rounds conclusion
     }
 
     /// Facilitate a single step of an inner-round of Interleaved_Initialize().
@@ -102,7 +147,8 @@ pub trait Interleaved: Transceive {
     /// timeslice: timeslice which inner-round starts
     /// l_i: l_i
     /// l_j: l_(i-1)
-    fn leader_action(&mut self, timeslice: usize, l_j: usize, l_i: usize) {
+    fn leader_action(&mut self, timeslice: usize, l_j: usize, l_i: usize,
+        conclude_l: bool) {
         // TODO: for S(1), how to get conclusion info of previous round?
         self.wait_until_timeslice(timeslice);  // TODO: this probably prevents getting global_l?
         let mut global_l: usize = 0; // TODO: get l from previous step l_j (l_(i - 1))
@@ -130,6 +176,7 @@ pub trait Interleaved: Transceive {
                     self.get_next_round_t() + new_l_j,
                     new_l_j,
                     global_l,
+                    // TODO: conclude_l to track if leader is concluding?
                 )
             );
         } else {
@@ -148,10 +195,12 @@ pub trait Interleaved: Transceive {
         // TODO
         if new_n_i > n_i {
             // TODO: new_n_i is ID assigned to this station for this leader
+            // TODO: does *last* follower action tracker need to be cleared here?
         } else if new_n_i == n_i {
             // TODO: randomly partition (50/50)
                 // schedule next follower action for the partition that's
                 // randomly joined
+            // TODO: update *last* follower action tracker (for round conclusion)
         } else {
             panic!("Error: follower received leader's conclusion step with
                 new_n_i < n_i.")
@@ -166,7 +215,8 @@ pub trait Interleaved: Transceive {
     ///
     /// timeslice: timeslice for step to participate in
     /// n_i: previous n_i
-    fn follower_action(&mut self, timeslice: usize, n_i: usize) {
+    fn follower_action(&mut self, timeslice: usize, n_i: usize,
+        conclude_f: bool) {
         // TODO
         // TODO: wait until 2j-2 (the timeslice before 2j-1) so we can transmit
         // during timeslice 2j-1
@@ -190,30 +240,28 @@ pub trait Interleaved: Transceive {
         // TODO check if this is technically round conclusion
     }
 
-    /// Action performed by all stations at the end of an outer-round.
-    /// Update the next outer-round's starting timeslice, allowing stations to
-    /// calculate when to schedule their actions for the following round.
-    /// Update the global L value to determine if more rounds are necessary.
-    fn round_conclusion_action(&mut self, timeslice: usize, n: usize, l: usize) {
+    /// Receive the data from the round concluding step and handle the round's
+    /// conclusion.
+    ///
+    /// Read in this round's final step (n_i, l), and update global L and the
+    /// next outer-round's starting timeslice, allowing stations to calculate
+    /// when to schedule their actions for the following round.
+    fn round_conclusion_action(&mut self, timeslice: usize) {
         // TODO
         self.wait_until_timeslice(timeslice);
-        // update values
-        // calculate next rounds conclusion
-        self.update_next_round_t(l);
-        // TODO: does next rounds actions need to be calculated here? I think
-        // they're done during other acitons (eg. new partitions know when to
-        // participate next round since l value?)
+        // TODO: read in final broadcasted (n_i, l)
+        self.round_conclusion(l);
     }
 
     /// Determine and perform next action
     fn handle_action(&mut self, action: RoundAction) {
         match action {
-            RoundAction::Leader(timeslice, l_j, l_i) =>
-                self.leader_action(timeslice, l_j, l_i),
-            RoundAction::Follower(timeslice, n_i) =>
-                self.follower_action(timeslice, n_i),
-            RoundAction::RoundConclusion(timeslice, n_i, l) =>
-                self.round_conclusion_action(timeslice, n_i, l),
+            RoundAction::Leader(timeslice, l_j, l_i, conclude_l) =>
+                self.leader_action(timeslice, l_j, l_i, conclude_l),
+            RoundAction::Follower(timeslice, n_i, conclude_f) =>
+                self.follower_action(timeslice, n_i, conclude_f),
+            RoundAction::RoundConclusion(timeslice) =>
+                self.round_conclusion_action(timeslice),
         }
     }
 
@@ -223,6 +271,9 @@ pub trait Interleaved: Transceive {
         // in last timeslice of outer-round, all stations listen
         // rinse and repeat
         while self.get_global_l() >= 1 {
+            // TODO: stations participating in final step in round cannot have
+            // RoundConclusion action in queue, will this cause problems?
+            // Possible answer: after they're done, they will use RoundConclusions.
             match self.pop_action() {
                 Some(action) => self.handle_action(action),
                 None => panic!("Error: no action to perform, but L >= 1. There
