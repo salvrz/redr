@@ -211,8 +211,6 @@ pub trait Interleaved: Transceive {
         match self.pop_action() {
             Some(a) => action = a,
             None => {
-                // TODO
-                // if no action and L >= 1, error!
                 println!("Error: no action to perform, but L >= 1. There should
                     at least be a RoundConclusion action....");
                 return;
