@@ -10,15 +10,6 @@ pub struct Station {
     next_round_t: usize,  // next outer-round's starting timeslice
     received: Vec<u8>,  // buffer, store received data
     action_queue: VecDeque<RoundAction>,  // actoins to do for this outer-round
-    init_data: InitData,
-}
-
-struct InitData {
-    n_i: usize,      // from Nakano and Olariu: N_i
-    local_l: usize,  // from Nakano and Olariu: l
-    global_l: usize, // from Nakano and Olariu: L
-    l_i: usize,      // from Nakano and Olariu: l_i
-    l_j: usize,      // from Nakano and Olariu: l_i-1
 }
 
 impl Transceive for Station {
@@ -86,13 +77,6 @@ impl Station {
             p,
             received: Vec::new(),
             action_queue: VecDeque::new(),
-            init_data: InitData {
-                n_i: 0,
-                local_l: 0,
-                global_l: 0,
-                l_i: 0,
-                l_j: 0,
-            },
         };
 
         // TODO populate action_queue with initial actions for first round
