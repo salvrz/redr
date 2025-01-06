@@ -54,11 +54,11 @@ impl Interleaved for Station {
     }
 
     fn pop_action(&mut self) -> Option<RoundAction> {
-        // TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        self.action_queue.pop_front()
     }
 
     fn push_action(&mut self, action: RoundAction) {
-        // TODO <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        self.action_queue.push_back(action);
     }
 
     fn get_next_round_t(&self) -> usize {
